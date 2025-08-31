@@ -1,6 +1,7 @@
 exports.seed = async function(knex) {
-  await knex('casos').del();
   await knex('agentes').del();
+
+  await knex.raw('ALTER SEQUENCE agentes_id_seq RESTART WITH 1');
 
   await knex('agentes').insert([
     {

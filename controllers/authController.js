@@ -63,3 +63,11 @@ exports.deleteUser = async (req, res) => {
 	await usuariosRepository.deleteUsuario(id);
 	return res.status(200).json({ message: 'Usuário excluído com sucesso.' });
 };
+
+exports.getMe = async (req, res) => {
+	const usuario = await usuariosRepository.findById(req.user.id);
+	if (!usuario) {
+		return res.status(404).json({ error: 'Usuário não encontrado.' });
+	}
+	res.status(200).json({ id: usuario.id, nome: usuario.nome, email: usuario.email });
+};

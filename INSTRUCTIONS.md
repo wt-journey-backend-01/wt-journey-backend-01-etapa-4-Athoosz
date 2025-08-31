@@ -1,3 +1,21 @@
+### Consultar dados do usuário autenticado (bônus)
+Endpoint: `GET /auth/usuarios/me`
+Headers:
+```
+Authorization: Bearer <token>
+```
+Retorno:
+```json
+{
+  "id": 1,
+  "nome": "admin",
+  "email": "admin@policia.com"
+}
+```
+Status Codes:
+- 200 OK: Retorna os dados do usuário autenticado.
+- 401 Unauthorized: Token inválido ou não enviado.
+- 404 Not Found: Usuário não encontrado.
 ## Autenticação de Usuários
 
 ### Registro de Usuário
@@ -34,7 +52,7 @@ Retorno:
 Status Codes:
 - 200 OK: Login bem-sucedido, retorna o objeto acima.
 - 400 Bad Request: Email do login já está em uso ou dados inválidos.
-- 401 Unauthorized: acess token inválido.
+- 401 Unauthorized: access token inválido.
 
 Importante:
 - Para gerenciar o segredo do seu JWT, utilize a seguinte variável de ambiente:
@@ -64,7 +82,7 @@ JWT_SECRET="segredo aqui"
 - Nunca insira segredos diretamente no código.
 
 ### Status Codes e Orientações
-- 200 OK: Login bem-sucedido, retorna `{ "acess_token": "token aqui" }`
+- 200 OK: Login bem-sucedido, retorna `{ "access_token": "token aqui" }`
 - 400 Bad Request: Email já está em uso ou dados inválidos
 - 401 Unauthorized: Token inválido ou expirado
 # INSTRUÇÕES PARA EXECUÇÃO DO PROJETO
