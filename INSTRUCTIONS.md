@@ -28,7 +28,7 @@ Body:
 Retorno:
 ```json
 {
-  "acess_token": "token aqui"
+  "access_token": "token aqui"
 }
 ```
 Status Codes:
@@ -112,5 +112,7 @@ npx knex seed:run
   ```sh
   docker stop policia_db
   ```
-- Para iniciar novamente:
+Para iniciar novamente:
   ```sh
+  docker start policia_db
+  ```

@@ -10,16 +10,23 @@ function isStrongPassword(senha) {
 }
 
 exports.register = async (req, res) => {
-	const { nome, email, senha } = req.body;
+	const { nome, email, senha, ...extras } = req.body;
 	if (!nome || !email || !senha) {
 		return res.status(400).json({ error: 'Nome, email e senha são obrigatórios.' });
+	}
+
+	const camposPermitidos = ['nome', 'email', 'senha'];
+	const camposRecebidos = Object.keys(req.body);
+	const camposExtras = camposRecebidos.filter(c => !camposPermitidos.includes(c));
+	if (camposExtras.length > 0) {
+		return res.status(400).json({ error: 'Campos extras não permitidos.' });
 	}
 	if (!isStrongPassword(senha)) {
 		return res.status(400).json({ error: 'Senha fraca. Deve ter ao menos 8 caracteres, uma letra minúscula, uma maiúscula, um número e um caractere especial.' });
 	}
 	const usuarioExistente = await usuariosRepository.findByEmail(email);
 	if (usuarioExistente) {
-		return res.status(409).json({ error: 'Email já está em uso.' });
+		return res.status(400).json({ error: 'Email já está em uso.' });
 	}
 	const hash = await bcrypt.hash(senha, 10);
 	const usuarioCriado = await usuariosRepository.createUsuario({ nome, email, senha: hash });
@@ -40,7 +47,7 @@ exports.login = async (req, res) => {
 		return res.status(401).json({ error: 'Credenciais inválidas.' });
 	}
 	const token = jwt.sign({ id: usuario.id, email: usuario.email }, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
-	return res.status(200).json({ acess_token: token });
+	return res.status(200).json({ access_token: token });
 };
 
 exports.logout = async (req, res) => {
