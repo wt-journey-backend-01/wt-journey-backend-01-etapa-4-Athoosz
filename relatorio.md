@@ -1,242 +1,196 @@
 <sup>Esse é um feedback gerado por IA, ele pode conter erros.</sup>
 
-Você tem 8 créditos restantes para usar o sistema de feedback AI.
+Você tem 7 créditos restantes para usar o sistema de feedback AI.
 
 # Feedback para Athoosz:
 
-Nota final: **43.5/100**
+Nota final: **52.0/100**
 
-Olá, Athoosz! 🚀 Que jornada bacana você está trilhando com essa API para o Departamento de Polícia! Antes de mais nada, parabéns por ter conseguido implementar várias funcionalidades importantes, especialmente a autenticação com JWT, o hashing de senhas com bcrypt e a proteção das rotas. Isso não é trivial e você mandou bem nisso! 🎉
+Olá, Athoosz! 🚀
 
----
+Primeiramente, parabéns pelo esforço e pela entrega do seu projeto! 🎉 Você conseguiu implementar várias funcionalidades importantes, especialmente a parte de autenticação com JWT, hashing de senha com bcrypt, e a estrutura geral do projeto está muito bem organizada. Isso é um ótimo sinal de que você está evoluindo bastante na construção de APIs seguras e profissionais.
 
-### 🎯 Pontos Fortes que Merecem Destaque
-
-- Seu `authController.js` está muito bem estruturado, com validação forte da senha, hash seguro com bcrypt e geração correta do JWT com expiração. Isso é fundamental para a segurança da aplicação.
-- O middleware de autenticação (`authMiddleware.js`) está implementado corretamente, validando o token JWT e protegendo as rotas de `/agentes` e `/casos`.
-- Os controllers de agentes e casos têm validações detalhadas e tratamento de erros personalizado, o que melhora muito a experiência da API.
-- Você seguiu o padrão MVC, separando controllers, repositories, rotas e middlewares, o que é excelente para manutenção e escalabilidade.
-- Nota bônus: você implementou corretamente os endpoints de filtragem e busca, que são requisitos extras. Isso mostra seu esforço para ir além do básico.
+Também é muito legal ver que você passou em todos os testes base relacionados a usuários (registro, login, logout, exclusão), além de garantir que o JWT tenha validade e que os erros de validação de senha estejam funcionando corretamente. Isso mostra que você tem uma boa compreensão dos fundamentos da segurança em APIs. 👏
 
 ---
 
-### 🚨 Onde Precisamos Dar Uma Atenção Especial (Análise dos Testes que Falharam)
+## 🚩 Mas vamos falar agora sobre os testes que falharam e onde podemos melhorar para destravar tudo!
 
-Você teve algumas dificuldades que impactaram sua nota e que precisam ser corrigidas para garantir que a aplicação funcione conforme esperado e passe em todos os testes obrigatórios.
+### Lista dos testes que falharam (resumido):
 
-Vou listar os testes que falharam e analisar as causas raiz para você entender a fundo o que está acontecendo.
+- **AGENTS (Agentes):** criação, listagem, busca por ID, atualização (PUT e PATCH), exclusão, e vários erros de validação e formatos incorretos.
+- **CASES (Casos):** criação, listagem, busca por ID, atualização (PUT e PATCH), exclusão, e erros de validação.
+- **Filtros e buscas específicas:** filtragem por status, por agente, por palavras-chave no título/descrição.
+- **Detalhes do usuário autenticado:** endpoint `/usuarios/me` (bônus).
 
 ---
 
-#### 1. `USERS: Recebe erro 400 ao tentar criar um usuário com e-mail já em uso`
+## Análise detalhada dos principais motivos das falhas
 
-**O que está acontecendo?**
+### 1. **Testes de Agentes falhando: criação, listagem, atualização, exclusão e erros de validação**
 
-No seu `authController.register`, você verifica se o email já existe com:
+Você implementou bem os controllers, repositories e rotas para agentes, e o middleware de autenticação está aplicado corretamente nas rotas `/agentes` (vejo isso no seu `server.js`).
+
+Porém, os testes indicam que algo está errado no comportamento esperado da API para agentes, incluindo:
+
+- **Status codes incorretos ou respostas inesperadas** ao criar, listar, atualizar e deletar agentes.
+- **Falhas em validações de payload** (ex: payload inválido, ID inválido).
+- **Falha ao buscar agentes por ID e por cargo.**
+
+**Causa raiz provável:**  
+No seu arquivo `routes/agentesRoutes.js`, notei que a rota para buscar agentes por cargo está definida assim:
 
 ```js
-const usuarioExistente = await usuariosRepository.findByEmail(email);
-if (usuarioExistente) {
-    return res.status(409).json({ error: 'Email já está em uso.' });
-}
+agentesRouter.get("/cargo/:cargo", agentesController.getAgentesByCargo);
 ```
 
-O problema é que o teste espera um **status 400 Bad Request** quando o email já está em uso, mas você está retornando **409 Conflict**.
-
-**Por que isso importa?**
-
-O teste está validando que a resposta para email duplicado seja 400, e sua resposta 409 faz o teste falhar.
-
-**Como corrigir?**
-
-Altere o status para 400, assim:
+Porém, essa rota está depois da rota:
 
 ```js
-if (usuarioExistente) {
-    return res.status(400).json({ error: 'Email já está em uso.' });
-}
+agentesRouter.get("/:id", agentesController.getAgenteById);
 ```
 
-**Recurso recomendado:** Para entender melhor códigos HTTP e quando usá-los, veja este vídeo sobre boas práticas em APIs REST: https://www.youtube.com/watch?v=bGN_xNc4A1k&t=3s
+Em Express, as rotas são avaliadas na ordem em que são declaradas. Como `/cargo/:cargo` tem um segmento dinâmico, ele está sendo "engolido" pela rota anterior `/:id`, porque o Express entende `cargo` como um `id`.
+
+**Isso faz com que as requisições para `/agentes/cargo/Delegada` sejam interpretadas como `/agentes/:id` com id = 'cargo', e isso quebra a busca por cargo.**
+
+**Como corrigir:**  
+Você deve mover a rota `/cargo/:cargo` para cima, antes da rota `/:id`, assim:
+
+```js
+agentesRouter.get("/cargo/:cargo", agentesController.getAgentesByCargo);
+agentesRouter.get("/:id", agentesController.getAgenteById);
+```
+
+Dessa forma, o Express vai primeiro tentar casar a rota de cargo e só depois a rota genérica de id.
 
 ---
 
-#### 2. `USERS: Recebe erro 400 ao tentar criar um usuário com campo extra`
+### 2. **Testes de Casos falhando: criação, listagem, atualização, exclusão e filtros**
 
-**O que está acontecendo?**
+Os testes indicam que os endpoints para casos também estão falhando em diversas operações básicas e filtros.
 
-O teste espera que, se o payload para criação de usuário tiver campos extras que não são esperados (exemplo: um campo `idade`), a API retorne erro 400.
-
-No seu controller, você não está validando se existem campos extras no corpo da requisição. Você apenas valida se nome, email e senha existem, mas não bloqueia campos extras.
-
-**Por que isso importa?**
-
-Aceitar campos extras pode ser um problema de segurança e integridade dos dados. Além disso, o teste exige esse comportamento.
-
-**Como corrigir?**
-
-Implemente uma validação para garantir que o corpo tenha somente os campos esperados. Por exemplo:
+Olhando seu arquivo `routes/casosRoutes.js`, vejo que você definiu as rotas de filtro para status e agente assim:
 
 ```js
-const allowedFields = ['nome', 'email', 'senha'];
-const extraFields = Object.keys(req.body).filter(field => !allowedFields.includes(field));
-if (extraFields.length > 0) {
-    return res.status(400).json({ error: 'Campos extras não permitidos: ' + extraFields.join(', ') });
-}
-```
-
-Coloque isso no início do seu `register` para rejeitar requisições com campos inesperados.
-
-**Recurso recomendado:** Para aprender mais sobre validação de entrada e segurança, recomendo este vídeo feito pelos meus criadores sobre autenticação e boas práticas: https://www.youtube.com/watch?v=Q4LQOfYwujk
-
----
-
-#### 3. `Simple Filtering: Estudante implementou endpoint de filtragem de caso por status corretamente` e outros testes bônus de filtragem que falharam
-
-Você implementou os endpoints de filtragem e busca, mas os testes bônus indicam que eles não passaram.
-
-**Análise técnica rápida:**
-
-- Seus endpoints de casos para filtragem por status e agente estão implementados, porém, no arquivo `casosRoutes.js`, as rotas para `/casos/status` e `/casos/agent` estão definidas *depois* da rota `/casos/:id`, o que pode causar conflito de rotas, já que `/casos/:id` captura qualquer caminho com `/casos/*`.
-
-- Por exemplo, quando você faz uma requisição para `/casos/status?status=aberto`, o Express pode interpretar `status` como `id` na rota `/casos/:id`, e não chamar o handler correto.
-
-**Como corrigir?**
-
-Reordene as rotas no arquivo `casosRoutes.js` para colocar as rotas específicas antes das rotas com parâmetros dinâmicos. Assim:
-
-```js
-// Coloque estas rotas antes das rotas com :id
-casosRouter.get("/status", casosController.getCasosByStatus);
 casosRouter.get("/agent", casosController.getCasosByAgenteId);
-casosRouter.get("/search", casosController.getCasosByTituloOrDescricao);
+casosRouter.get("/status", casosController.getCasosByStatus);
+```
 
-// Depois as rotas com :id
+Mas o problema é semelhante ao dos agentes: rotas com query strings não devem vir depois de rotas com parâmetros dinâmicos que podem "engolir" elas.
+
+No seu arquivo, você declarou a rota genérica `/:id` antes dessas rotas específicas:
+
+```js
 casosRouter.get("/:id", casosController.getCasoById);
-casosRouter.put("/:id", casosController.updateCaso);
-casosRouter.patch("/:id", casosController.patchCaso);
-casosRouter.delete("/:id", casosController.deleteCaso);
+casosRouter.get("/agent", casosController.getCasosByAgenteId);
+casosRouter.get("/status", casosController.getCasosByStatus);
 ```
 
-**Por que isso?**
+O Express vai interpretar `/casos/agent` como `/casos/:id` com id = 'agent', e nunca vai chegar na rota correta para filtro por agente.
 
-O Express avalia as rotas na ordem em que são declaradas. Rotas genéricas com parâmetros dinâmicos (`/:id`) devem vir depois das rotas específicas para evitar conflitos.
-
-**Recurso recomendado:** Para entender melhor roteamento no Express, veja este vídeo sobre boas práticas e organização de rotas: https://www.youtube.com/watch?v=bGN_xNc4A1k&t=3s
-
----
-
-#### 4. `USERS: Recebe erro 400 ao tentar criar um usuário com nome vazio ou nulo`
-
-Você passou neste teste, mas seu `INSTRUCTIONS.md` apresenta inconsistências que podem confundir quem for usar sua API.
-
-**Exemplo no seu INSTRUCTIONS.md:**
-
-```md
-Retorno:
-```json
-{
-  "acess_token": "token aqui"
-}
-```
-```
-
-Aqui você escreveu `"acess_token"` em vez de `"access_token"` (com dois 's'). Isso pode causar problemas em clientes que consomem sua API.
-
-**Como corrigir?**
-
-Padronize para `"access_token"` em todo lugar, inclusive no controller `authController.login`:
+**Como corrigir:**  
+Mova as rotas fixas para cima, antes da rota dinâmica `/:id`:
 
 ```js
-return res.status(200).json({ access_token: token });
+casosRouter.get("/agent", casosController.getCasosByAgenteId);
+casosRouter.get("/status", casosController.getCasosByStatus);
+casosRouter.get("/search", casosController.getCasosByTituloOrDescricao);
+casosRouter.get("/:id", casosController.getCasoById);
+```
+
+Assim o Express vai casar corretamente as rotas específicas antes de interpretar algo como um ID.
+
+---
+
+### 3. **Endpoint `/usuarios/me` não implementado**
+
+Esse é um requisito bônus que você não implementou ainda. Ele deve retornar os dados do usuário autenticado, usando o token JWT para identificar quem está fazendo a requisição.
+
+Para implementar, basta criar uma rota protegida, por exemplo:
+
+```js
+// routes/authRoutes.js
+router.get('/usuarios/me', authMiddleware, authController.getMe);
+```
+
+E no controller:
+
+```js
+exports.getMe = async (req, res) => {
+  const userId = req.user.id;
+  const usuario = await usuariosRepository.findById(userId);
+  if (!usuario) {
+    return res.status(404).json({ error: 'Usuário não encontrado.' });
+  }
+  res.status(200).json({ id: usuario.id, nome: usuario.nome, email: usuario.email });
+};
 ```
 
 ---
 
-#### 5. Penalidade: `Static files: usuário não seguiu estrutura de arquivos à risca`
+### 4. **Outros pontos importantes para segurança**
 
-Seu projeto ficou com a estrutura quase perfeita, mas falta o arquivo `.env` e o `docker-compose.yml` no repositório, que são importantes para facilitar o setup do ambiente.
-
-Além disso, no seu `INSTRUCTIONS.md`, o trecho para iniciar o banco com Docker está incompleto:
-
-```md
-Para iniciar novamente:
-```
-
-Está sem o comando para subir o container.
-
-**Como corrigir?**
-
-- Inclua o arquivo `.env` com as variáveis necessárias (sem expor segredos reais, apenas um template).
-- Inclua um `docker-compose.yml` para facilitar subir o banco.
-- Complete o `INSTRUCTIONS.md` com o comando correto para iniciar o banco:
-
-```sh
-docker start policia_db
-```
-
-**Recurso recomendado:** Para entender como configurar banco com Docker e Knex, veja este vídeo: https://www.youtube.com/watch?v=uEABDBQV-Ek&t=1s
-
----
-
-### 🛠️ Outras Observações Técnicas
-
-- No `authController.login` você define:
+- No seu `authController.js`, você tem um fallback para `JWT_SECRET`:
 
 ```js
 const JWT_SECRET = process.env.JWT_SECRET || 'segredo_super_secreto';
 ```
 
-Mas no middleware você faz:
-
-```js
-const JWT_SECRET = process.env.JWT_SECRET;
-```
-
-Se a variável de ambiente não estiver definida, o middleware terá `undefined` e falhará. Isso pode causar erros difíceis de debugar em produção.
-
-**Sugestão:** Centralize a leitura da variável de ambiente em um arquivo config, ou garanta que `JWT_SECRET` sempre tenha valor, por exemplo:
-
-```js
-const JWT_SECRET = process.env.JWT_SECRET || 'segredo_super_secreto';
-```
-
-em ambos os lugares.
+Isso pode ser um problema em produção e nos testes, pois o segredo deve vir **somente** da variável de ambiente `.env`. Recomendo que você retire o fallback para garantir que o segredo seja sempre configurado via `.env`. Caso contrário, pode causar falha na validação do JWT.
 
 ---
 
-### 📚 Recursos para Você Estudar e Melhorar
+### 5. **Validação de senha e campos extras no registro**
 
-- **Autenticação JWT e segurança:** https://www.youtube.com/watch?v=Q4LQOfYwujk (Esse vídeo, feito pelos meus criadores, fala muito bem sobre conceitos fundamentais de autenticação e segurança.)
-- **Uso prático de JWT e BCrypt:** https://www.youtube.com/watch?v=L04Ln97AwoY
-- **Configuração de banco com Docker e Knex:** https://www.youtube.com/watch?v=uEABDBQV-Ek&t=1s
-- **Arquitetura MVC e boas práticas em Node.js:** https://www.youtube.com/watch?v=bGN_xNc4A1k&t=3s
-- **Roteamento e organização no Express:** https://www.youtube.com/watch?v=bGN_xNc4A1k&t=3s
+Você fez uma ótima validação para o registro, rejeitando campos extras e checando força da senha. Isso é excelente! 👏
 
 ---
 
-### 📋 Resumo dos Pontos para Focar e Corrigir
+### 6. **Estrutura de diretórios e organização**
 
-- Corrigir o status code para email duplicado de 409 para 400 no registro de usuário.
-- Validar e rejeitar campos extras no payload de criação de usuário.
-- Reordenar rotas no `casosRoutes.js` para evitar conflito entre rotas específicas e dinâmicas.
-- Corrigir o nome do campo `access_token` para padronizar em toda a API e documentação.
-- Garantir que `JWT_SECRET` esteja definido consistentemente em todo o código.
-- Completar a documentação e estrutura do projeto com `.env` e `docker-compose.yml` para facilitar o setup.
-- Revisar o `INSTRUCTIONS.md` para corrigir pequenos erros e completar instruções.
-- Continuar investindo em testes e validações para garantir robustez da API.
+Sua estrutura está perfeita e segue exatamente o que foi pedido no desafio! Isso facilita muito a manutenção e escalabilidade do projeto, parabéns! 🎯
 
 ---
 
-### 💬 Conclusão
+## Recomendações de aprendizado para você:
 
-Athoosz, você está no caminho certo e já fez um trabalho sólido com autenticação, hashing e proteção das rotas! O que falta são ajustes importantes para alinhar à especificação dos testes, especialmente na padronização de respostas, validação rigorosa dos dados de entrada e organização das rotas para evitar conflitos.
+- Para entender melhor o comportamento das rotas dinâmicas e fixas no Express e evitar conflitos, veja este vídeo sobre **Arquitetura MVC e organização de rotas**:  
+https://www.youtube.com/watch?v=bGN_xNc4A1k&t=3s
 
-Essas correções vão destravar uma nota muito melhor e deixar sua API pronta para produção de verdade! Continue firme, pois você está construindo uma base muito boa. Se precisar, revise os recursos que recomendei, eles vão te ajudar bastante a entender os detalhes.
+- Para aprofundar no uso de rotas no Express e evitar problemas como os que você enfrentou, recomendo este tutorial:  
+https://expressjs.com/en/guide/routing.html (documentação oficial do Express)
 
-Conte comigo para o que precisar! 🚀💙
+- Para aprimorar seu entendimento sobre autenticação JWT e segurança, assista este vídeo, feito pelos meus criadores, que explica de forma clara os conceitos básicos e a prática:  
+https://www.youtube.com/watch?v=Q4LQOfYwujk
 
-Um abraço e bons códigos! 👊✨
+- Para entender melhor o uso do Knex e como trabalhar com migrations e seeds, recomendo:  
+https://www.youtube.com/watch?v=dXWy_aGCW1E  
+https://www.youtube.com/watch?v=GLwHSs7t3Ns&t=4s
+
+---
+
+## Resumo dos pontos para foco e correção 🎯
+
+- ⚠️ **Corrija a ordem das rotas dinâmicas e fixas nos arquivos `agentesRoutes.js` e `casosRoutes.js` para evitar que rotas específicas sejam "engolidas" por rotas genéricas.**
+
+- ⚠️ **Implemente o endpoint `/usuarios/me` para retornar os dados do usuário autenticado (requisito bônus).**
+
+- ⚠️ **Remova o fallback do `JWT_SECRET` no `authController.js` para garantir que o segredo seja sempre obtido via variável de ambiente.**
+
+- ⚠️ **Checar se os testes esperam status code 409 para email já em uso no registro (você usa 400, revise se está ok com o teste).**
+
+- ✅ **Continue mantendo a validação forte de senha e rejeição de campos extras no registro.**
+
+- ✅ **Mantenha a organização e estrutura do projeto como está, está muito boa!**
+
+---
+
+Athoosz, você está no caminho certo! Seu projeto já tem uma base sólida de segurança e estrutura, e com esses ajustes você vai conseguir passar em todos os testes e entregar uma API robusta e profissional. Continue firme, e não hesite em revisar a documentação oficial e os vídeos recomendados para fixar os conceitos. Estou aqui torcendo pelo seu sucesso! 🚀💙
+
+Se precisar de mais ajuda, é só chamar!
+
+Um abraço e bons códigos! 👨‍💻✨
 
 > Caso queira tirar uma dúvida específica, entre em contato com o Chapter no nosso [discord](https://discord.gg/DryuHVnz).
 
