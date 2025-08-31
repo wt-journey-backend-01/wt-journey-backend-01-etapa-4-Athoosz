@@ -42,6 +42,26 @@ agentesRouter.get("/", agentesController.getAllAgentes);
 
 /**
  * @swagger
+ * /agentes/cargo/{cargo}:
+ *   get:
+ *     summary: Obtém agentes por cargo
+ *     parameters:
+ *       - in: path
+ *         name: cargo
+ *         required: true
+ *         description: Cargo do agente
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Lista de agentes com o cargo especificado
+ *       404:
+ *         description: Nenhum agente encontrado com este cargo
+ */
+agentesRouter.get("/cargo/:cargo", agentesController.getAgentesByCargo);
+
+/**
+ * @swagger
  * /agentes/{id}:
  *   get:
  *     summary: Obtém um agente específico pelo ID
@@ -157,24 +177,6 @@ agentesRouter.patch("/:id", agentesController.patchAgente);
  */
 agentesRouter.delete("/:id", agentesController.deleteAgente);
 
-/**
- * @swagger
- * /agentes/cargo/{cargo}:
- *   get:
- *     summary: Obtém agentes por cargo
- *     parameters:
- *       - in: path
- *         name: cargo
- *         required: true
- *         description: Cargo do agente
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Lista de agentes com o cargo especificado
- *       404:
- *         description: Nenhum agente encontrado com este cargo
- */
-agentesRouter.get("/cargo/:cargo", agentesController.getAgentesByCargo);
+
 
 module.exports = agentesRouter;

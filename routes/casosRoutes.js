@@ -17,26 +17,6 @@ casosRouter.get("/", casosController.getAllCasos);
 
 /**
  * @swagger
- * /casos/{id}:
- *   get:
- *     summary: Obtém um caso específico pelo ID
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         description: ID do caso
- *         schema:
- *           type: string
- *     responses:
- *       200:
- *         description: Detalhes do caso
- *       404:
- *         description: Caso não encontrado
- */
-casosRouter.get("/:id", casosController.getCasoById);
-
-/**
- * @swagger
  * /casos:
  *   post:
  *     summary: Cria um novo caso
@@ -191,5 +171,25 @@ casosRouter.get("/status", casosController.getCasosByStatus);
  *         description: Nenhum caso encontrado
  */
 casosRouter.get("/search", casosController.getCasosByTituloOrDescricao);
+
+/**
+ * @swagger
+ * /casos/{id}:
+ *   get:
+ *     summary: Obtém um caso específico pelo ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: ID do caso
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Detalhes do caso
+ *       404:
+ *         description: Caso não encontrado
+ */
+casosRouter.get("/:id", casosController.getCasoById);
 
 module.exports = casosRouter;
