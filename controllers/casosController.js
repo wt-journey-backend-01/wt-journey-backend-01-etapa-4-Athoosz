@@ -22,11 +22,11 @@ async function getCasoById(req, res) {
    try {
       const caso = await casosRepository.findById(id);
       if (!caso) {
-         return res.status(404).json({ message: "Caso não encontrado" });
+         return errorResponse(res, 404, "Caso não encontrado");
       }
       return res.status(200).json(caso);
    } catch (error) {
-      return res.status(500).json({ message: "Erro ao buscar caso", error: error.message });
+      return errorResponse(res, 500, "Erro ao buscar caso", [{ error: error.message }]);
    }
 }
 
@@ -171,6 +171,12 @@ async function patchCaso(req, res) {
    const { id } = req.params;
    const { id: newId, ...updatedFields } = req.body;
 
+   // Validação de ID
+   if (isNaN(Number(id))) {
+      return errorResponse(res, 400, "ID inválido: deve ser um número");
+   }
+
+   // Validação de payload
    if (
       !updatedFields ||
       typeof updatedFields !== "object" ||
@@ -193,9 +199,10 @@ async function patchCaso(req, res) {
       return errorResponse(res, 404, "Caso não encontrado");
    }
 
+   // Validação dos campos
    if (
       updatedFields.titulo !== undefined &&
-      updatedFields.titulo.trim() === ""
+      (typeof updatedFields.titulo !== "string" || updatedFields.titulo.trim() === "")
    ) {
       return errorResponse(res, 400, "O campo 'titulo' não pode ser vazio", [
          { titulo: "Título inválido" },
@@ -203,7 +210,7 @@ async function patchCaso(req, res) {
    }
    if (
       updatedFields.descricao !== undefined &&
-      updatedFields.descricao.trim() === ""
+      (typeof updatedFields.descricao !== "string" || updatedFields.descricao.trim() === "")
    ) {
       return errorResponse(res, 400, "O campo 'descricao' não pode ser vazio", [
          { descricao: "Descrição inválida" },

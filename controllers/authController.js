@@ -61,7 +61,7 @@ exports.deleteUser = async (req, res) => {
 		return res.status(404).json({ error: 'Usuário não encontrado.' });
 	}
 	await usuariosRepository.deleteUsuario(id);
-	return res.status(200).json({ message: 'Usuário excluído com sucesso.' });
+	return res.status(204).send();
 };
 
 exports.getMe = async (req, res) => {

@@ -53,10 +53,10 @@ async function getAgenteById(req, res) {
       if (agente) {
          return res.status(200).json(agente);
       } else {
-         return res.status(404).json({ message: "Agente não encontrado" });
+         return errorResponse(res, 404, "Agente não encontrado");
       }
    } catch (error) {
-      return res.status(500).json({ message: "Erro ao buscar agente", error: error.message });
+      return errorResponse(res, 500, "Erro ao buscar agente", [{ error: error.message }]);
    }
 }
 
@@ -107,7 +107,7 @@ async function createAgente(req, res) {
       const agenteCriado = await agentesRepository.createAgente(novoAgente);
       return res.status(201).json(agenteCriado);
    } catch (error) {
-      return res.status(400).json({ message: "Erro ao criar agente", error: error.message });
+      return errorResponse(res, 400, "Erro ao criar agente", [{ error: error.message }]);
    }
 }
 
@@ -170,7 +170,7 @@ async function updateAgente(req, res) {
       const agenteAtualizado = await agentesRepository.updateAgente(id, updatedAgente);
       return res.status(200).json(agenteAtualizado);
    } catch (error) {
-      return res.status(400).json({ message: "Erro ao atualizar agente", error: error.message });
+      return errorResponse(res, 400, "Erro ao atualizar agente", [{ error: error.message }]);
    }
 }
 
